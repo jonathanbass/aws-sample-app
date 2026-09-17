@@ -443,3 +443,6 @@ override.tf.json
 
 # Serena
 .serena/
+
+# Terraform build artifacts
+infra/main/.build/

@@ -46,7 +46,8 @@ Not a development task. See `infra/bootstrap/README.md` for the full runbook.
 
 ### Tasks
 
-- [ ] **Task 1.1: Terraform skeleton for the main stack**
+- [x] **Task 1.1: Terraform skeleton for the main stack**
+  **Notes:** Done. `terraform fmt -check` clean, `terraform validate` passes (verified offline via `init -backend=false`, no AWS calls). Provider pinned `~> 6.65` to match the version bootstrap resolved (6.65.0). Backend is partial config — `bucket` supplied by CI via `-backend-config`.
 
   **Files:** Create `infra/main/main.tf`, `infra/main/variables.tf`, `infra/main/outputs.tf`
   **Acceptance criteria:**
@@ -56,7 +57,8 @@ Not a development task. See `infra/bootstrap/README.md` for the full runbook.
   - `variables.tf` declares `aws_region` (default `eu-west-1`) and `project_name`
   **Constraints:** Backend `bucket` cannot be a variable — Terraform backends do not accept interpolation. Pass it via `-backend-config` from the workflow using `TF_STATE_BUCKET`.
 
-- [ ] **Task 1.2: Solution and build configuration skeleton**
+- [x] **Task 1.2: Solution and build configuration skeleton**
+  **Notes:** Done. `dotnet build` succeeds. **Deviation:** .NET 10's `dotnet new sln` produces `AwsSampleApp.slnx` (new XML format), not `.sln` — kept, since it is the SDK default. ARM64/`linux-arm64` is gated behind an `IsLambdaProject` property so test projects do not inherit it.
 
   **Files:** Create `src/AwsSampleApp.sln`, `src/Directory.Build.props`, `src/Directory.Packages.props`
   **Acceptance criteria:**
@@ -64,7 +66,9 @@ Not a development task. See `infra/bootstrap/README.md` for the full runbook.
   - Central package management enabled (`ManagePackageVersionsCentrally`)
   - `dotnet build src/AwsSampleApp.sln` succeeds on an empty solution
 
-- [ ] **Task 1.3: Deploy workflow**
+- [-] **Task 1.3: Deploy workflow**
+  **Blocked:** Claude is sandbox-denied from writing to `.github/workflows/`. File is written and YAML-validated (js-yaml: 8 steps, correct `permissions` and `concurrency`) but staged in the scratchpad — **the user must copy it into `.github/workflows/deploy.yml`.**
+  **Deviation:** placeholder `deploy-ingest`/`deploy-notifier` jobs are NOT declared. A GitHub Actions job with no steps is invalid, so they are added by the phase that fills them (2 and 4). A comment in the file records the requirement that every one carries `needs: terraform`.
 
   **Files:** Create `.github/workflows/deploy.yml`
   **Acceptance criteria:**
@@ -74,7 +78,8 @@ Not a development task. See `infra/bootstrap/README.md` for the full runbook.
   - Placeholder service jobs declared with `needs: terraform` (bodies filled in later phases)
   **Constraints:** Every future code-deploy job MUST carry `needs: terraform`. That is what guarantees infrastructure-before-application ordering.
 
-- [ ] **Task 1.4: Placeholder Lambda artifact**
+- [x] **Task 1.4: Placeholder Lambda artifact**
+  **Notes:** Done as `data "archive_file" "placeholder"` in `infra/main/main.tf`, generating `.build/placeholder.zip` (gitignored). Required adding the `hashicorp/archive` provider.
 
   **Files:** Create `infra/main/placeholder/` with a trivial zip source, referenced via `data "archive_file"`
   **Acceptance criteria:** Every `aws_lambda_function` in later phases can point at this until its real code deploys

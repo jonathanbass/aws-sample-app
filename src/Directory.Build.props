@@ -1,0 +1,30 @@
+<Project>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+
+    <!-- Lambda runs one culture. Skips loading ICU, which trims cold start
+         and package size for free. -->
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <!-- Lambda functions are published for ARM64 Linux (Graviton): cheaper per
+       ms and faster to start than x86. Test projects must NOT inherit this -
+       they run on the host machine. -->
+  <PropertyGroup Condition="'$(IsLambdaProject)' == 'true'">
+    <RuntimeIdentifier>linux-arm64</RuntimeIdentifier>
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+</Project>

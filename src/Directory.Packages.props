@@ -1,0 +1,23 @@
+<Project>
+
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+
+  <!-- Versions live here and nowhere else. Project files reference packages
+       without a Version attribute.
+
+       Package versions are added by the phase that first needs them, so this
+       stays honest about what is actually in use:
+         Phase 2  AWSSDK.DynamoDBv2, Amazon.Lambda.Core,
+                  Amazon.Lambda.APIGatewayEvents, Amazon.Lambda.RuntimeSupport
+         Phase 3  AWSSDK.SQS, Amazon.Lambda.DynamoDBEvents
+         Phase 5  AWSSDK.ApiGatewayManagementApi, Amazon.Lambda.SQSEvents
+         Tests    xunit.v3, NSubstitute, AwesomeAssertions,
+                  Microsoft.NET.Test.Sdk
+  -->
+  <ItemGroup>
+  </ItemGroup>
+
+</Project>
