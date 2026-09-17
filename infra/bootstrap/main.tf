@@ -91,10 +91,20 @@ data "aws_iam_policy_document" "ci_trust" {
       identifiers = [aws_iam_openid_connect_provider.github.arn]
     }
 
+    # TEMPORARY DIAGNOSTIC - restore to StringEquals "sts.amazonaws.com" once
+    # OIDC is working.
+    #
+    # Purpose: with `sub` already wildcarded, this is the only other condition.
+    # If assumption now succeeds, `aud` was the mismatch. If it still fails,
+    # neither condition is at fault and the problem is the Principal binding or
+    # an account-level policy.
+    #
+    # This is safe to leave briefly: `sub` below still restricts assumption to
+    # this repository, so the role is not exposed to other GitHub accounts.
     condition {
-      test     = "StringEquals"
+      test     = "StringLike"
       variable = "token.actions.githubusercontent.com:aud"
-      values   = ["sts.amazonaws.com"]
+      values   = ["*"]
     }
 
     # TEMPORARY DIAGNOSTIC - tighten back to StringEquals on the exact branch
