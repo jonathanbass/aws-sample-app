@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsLambdaProject>true</IsLambdaProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Amazon.Lambda.Core" />
+    <PackageReference Include="Amazon.Lambda.APIGatewayEvents" />
+    <PackageReference Include="Amazon.Lambda.RuntimeSupport" />
+    <PackageReference Include="Amazon.Lambda.Serialization.SystemTextJson" />
+    <PackageReference Include="AWSSDK.DynamoDBv2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Ingest.Api.Tests" />
+  </ItemGroup>
+
+</Project>

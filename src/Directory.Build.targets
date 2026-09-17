@@ -1,0 +1,21 @@
+<Project>
+
+  <!-- Imported AFTER the project body, so $(IsLambdaProject) set in a csproj
+       is visible here. The equivalent condition in Directory.Build.props would
+       always evaluate false - .props is imported before the project sets it. -->
+
+  <PropertyGroup Condition="'$(IsLambdaProject)' == 'true'">
+    <!-- Lambda functions are executables hosting Amazon.Lambda.RuntimeSupport.
+         On the managed dotnet10 runtime the handler string is simply the
+         assembly name, so the assembly is NOT renamed to `bootstrap` - that
+         convention belongs to the provided.al2023 custom runtime. -->
+    <OutputType>Exe</OutputType>
+
+    <!-- The ARM64 (Graviton) runtime identifier is deliberately NOT set here.
+         The deploy workflow passes it at publish time:
+             dotnet publish -c Release -r linux-arm64
+         Setting it on the project would force every referencing test project
+         into a cross-RID reference and break `dotnet test` on Windows. -->
+  </PropertyGroup>
+
+</Project>

@@ -1,0 +1,146 @@
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# id-token: write is REQUIRED for OIDC. Without it the role assumption fails
+# with a confusing credentials error rather than a permissions one.
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: read
+
+# Terraform state allows one writer. Serialise deploys rather than letting two
+# pushes race for the S3 lock. Never cancel in progress - a half-applied stack
+# is worse than a queued one.
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+env:
+  TERRAFORM_VERSION: 1.16.2
+  DOTNET_VERSION: "10.0.x"
+
+jobs:
+  # Path filtering so each service deploys independently, per the design.
+  # workflow_dispatch forces everything to deploy.
+  changes:
+    name: detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      ingest: ${{ steps.filter.outputs.ingest || github.event_name == 'workflow_dispatch' }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            ingest:
+              - 'src/Ingest/**'
+              - 'src/Contracts/**'
+              - 'src/Directory.*.props'
+              - 'src/Directory.Build.targets'
+
+  terraform:
+    name: terraform apply
+    runs-on: ubuntu-latest
+    outputs:
+      ingest_function_name: ${{ steps.outputs.outputs.ingest_function_name }}
+      http_api_url: ${{ steps.outputs.outputs.http_api_url }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Confirm assumed identity
+        run: aws sts get-caller-identity
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      - name: Terraform init
+        working-directory: infra/main
+        run: terraform init -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}"
+
+      - name: Terraform format check
+        working-directory: infra/main
+        run: terraform fmt -check -recursive
+
+      - name: Terraform validate
+        working-directory: infra/main
+        run: terraform validate
+
+      - name: Terraform apply
+        working-directory: infra/main
+        run: terraform apply -auto-approve
+
+      # Read names back from state rather than hardcoding them in this file -
+      # a rename in Terraform would otherwise silently deploy to nothing.
+      - name: Capture outputs
+        id: outputs
+        working-directory: infra/main
+        run: |
+          echo "ingest_function_name=$(terraform output -raw ingest_submit_function_name)" >> "$GITHUB_OUTPUT"
+          echo "http_api_url=$(terraform output -raw http_api_url)" >> "$GITHUB_OUTPUT"
+
+      - name: Summary
+        run: |
+          echo "HTTP API: ${{ steps.outputs.outputs.http_api_url }}" >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-ingest:
+    name: deploy ingest
+    # needs: terraform is what guarantees infrastructure exists before code is
+    # pushed to it. EVERY future deploy job must declare it.
+    needs: [terraform, changes]
+    if: needs.changes.outputs.ingest == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      # Tests run before deploy, not after. The DynamoDB Local container the
+      # handler contract tests need is available on ubuntu-latest runners.
+      - name: Test
+        run: dotnet test src/AwsSampleApp.slnx -c Release
+
+      - name: Publish
+        run: >
+          dotnet publish src/Ingest/Ingest.Api/Ingest.Api.csproj
+          -c Release -r linux-arm64 --self-contained false
+          -o publish/ingest-api
+
+      - name: Zip
+        working-directory: publish/ingest-api
+        run: zip -r ../ingest-api.zip .
+
+      - name: Update function code
+        run: >
+          aws lambda update-function-code
+          --function-name ${{ needs.terraform.outputs.ingest_function_name }}
+          --zip-file fileb://publish/ingest-api.zip
+          --publish
+
+# ---------------------------------------------------------------------------
+# Further deploy jobs are added by the phase that introduces them:
+#
+#   deploy-notifier  (Phase 4)  paths: src/Notifier/**, src/Contracts/**
+#
+# EVERY one of them MUST declare `needs: terraform`.
+# ---------------------------------------------------------------------------

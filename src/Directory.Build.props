@@ -13,14 +13,9 @@
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
 
-  <!-- Lambda functions are published for ARM64 Linux (Graviton): cheaper per
-       ms and faster to start than x86. Test projects must NOT inherit this -
-       they run on the host machine. -->
-  <PropertyGroup Condition="'$(IsLambdaProject)' == 'true'">
-    <RuntimeIdentifier>linux-arm64</RuntimeIdentifier>
-    <PublishReadyToRun>false</PublishReadyToRun>
-    <OutputType>Exe</OutputType>
-  </PropertyGroup>
+  <!-- Lambda-specific settings live in Directory.Build.targets, NOT here.
+       This .props file is imported BEFORE the project body, so a condition on
+       $(IsLambdaProject) would evaluate before the csproj has set it. -->
 
   <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
     <IsPackable>false</IsPackable>

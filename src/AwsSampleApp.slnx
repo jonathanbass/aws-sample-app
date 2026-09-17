@@ -1,2 +1,6 @@
 <Solution>
+  <Folder Name="/Ingest/">
+    <Project Path="Ingest/Ingest.Api.Tests/Ingest.Api.Tests.csproj" />
+    <Project Path="Ingest/Ingest.Api/Ingest.Api.csproj" />
+  </Folder>
 </Solution>

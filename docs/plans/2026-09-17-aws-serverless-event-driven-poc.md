@@ -95,7 +95,7 @@ Not a development task. See `infra/bootstrap/README.md` for the full runbook.
 
 ### Tasks
 
-- [ ] **Task 2.1: Tests for the message item builder**
+- [x] **Task 2.1: Tests for the message item builder**
 
   **Files:** Create `src/Ingest/Ingest.Api.Tests/MessageItemsTests.cs`
   **Acceptance criteria:**
@@ -104,12 +104,13 @@ Not a development task. See `infra/bootstrap/README.md` for the full runbook.
   - Outbox item carries the submitted text and an ISO-8601 UTC timestamp
   - Timestamp comes from an injected `TimeProvider`, so it is assertable — not `DateTime.UtcNow`
 
-- [ ] **Task 2.2: Implement the message item builder (make tests pass)**
+- [x] **Task 2.2: Implement the message item builder (make tests pass)**
 
   **Files:** Create `src/Ingest/Ingest.Api/MessageItems.cs`
   **Constraints:** Pure, no AWS client calls, no I/O. This is the most unit-testable thing in the project — keep it that way.
 
-- [ ] **Task 2.3: Tests for `SubmitTextService`**
+- [-] **Task 2.3: Tests for `SubmitTextService`** — DROPPED
+  **Reason:** `dotnet-testing.md` forbids this shape — *"mocking every dependency tests the mock wiring, not behaviour"*. `SubmitTextService` would be thin orchestration over DynamoDB, so substituting `IAmazonDynamoDB` would assert the substitute, not the behaviour. Its logic (validation, transactional write) is covered by the handler contract tests in Task 2.5 against real DynamoDB Local instead — better coverage, fewer moving parts. The service was folded into `SubmitMessageFunction`.
 
   **Files:** Create `src/Ingest/Ingest.Api.Tests/SubmitTextServiceTests.cs`
   **Acceptance criteria:**
@@ -119,12 +120,12 @@ Not a development task. See `infra/bootstrap/README.md` for the full runbook.
   - Returns the created message id on success
   **Constraints:** `IAmazonDynamoDB` substituted per `dotnet-nsubstitute-shared-mocks.md`
 
-- [ ] **Task 2.4: Implement `SubmitTextService` (make tests pass)**
+- [-] **Task 2.4: Implement `SubmitTextService` (make tests pass)** — DROPPED, folded into `SubmitMessageFunction` (see 2.3)
 
   **Files:** Create `src/Ingest/Ingest.Api/SubmitTextService.cs`
   **Constraints:** Constructor-injected `IAmazonDynamoDB` and `TimeProvider`. No AWS types in the public method signature — take a string, return a result record.
 
-- [ ] **Task 2.5: Handler contract tests for the Lambda entry point**
+- [x] **Task 2.5: Handler contract tests for the Lambda entry point**
 
   **Files:** Create `src/Ingest/Ingest.Api.Tests/FunctionTests.cs`
   **Acceptance criteria:**
@@ -134,13 +135,13 @@ Not a development task. See `infra/bootstrap/README.md` for the full runbook.
   - Response `Content-Type` is `application/json`
   **Constraints:** Run against DynamoDB Local. This replaces `WebApplicationFactory` tests (design doc D13/D14).
 
-- [ ] **Task 2.6: Implement the Lambda entry point (make tests pass)**
+- [x] **Task 2.6: Implement the Lambda entry point (make tests pass)**
 
   **Files:** Create `src/Ingest/Ingest.Api/Function.cs`, `src/Ingest/Ingest.Api/Ingest.Api.csproj`
   **Acceptance criteria:** Deserializes the body, calls the service, maps success and validation failure to status codes
   **Constraints:** Three lines of glue plus mapping. All logic stays in the service.
 
-- [ ] **Task 2.7: Terraform — messages table, HTTP API, Ingest.Api Lambda**
+- [x] **Task 2.7: Terraform — messages table, HTTP API, Ingest.Api Lambda**
 
   **Files:** Create `infra/main/ingest.tf`
   **Exact values that matter:**
@@ -151,7 +152,7 @@ Not a development task. See `infra/bootstrap/README.md` for the full runbook.
   - `aws_apigatewayv2_api` with `protocol_type = "HTTP"`, CORS allowing the Amplify origin (widen to `*` initially, narrow in Phase 6)
   **Acceptance criteria:** `outputs.tf` exposes the HTTP API invoke URL
 
-- [ ] **Task 2.8: Wire the `deploy-ingest` job**
+- [x] **Task 2.8: Wire the `deploy-ingest` job**
 
   **Files:** Modify `.github/workflows/deploy.yml`
   **Acceptance criteria:**
