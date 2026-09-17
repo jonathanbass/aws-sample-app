@@ -69,8 +69,8 @@ resource "aws_s3_bucket_public_access_block" "state" {
 # ---------------------------------------------------------------------------
 
 resource "aws_iam_openid_connect_provider" "github" {
-  url             = "https://token.actions.githubusercontent.com"
-  client_id_list  = ["sts.amazonaws.com"]
+  url            = "https://token.actions.githubusercontent.com"
+  client_id_list = ["sts.amazonaws.com"]
 
   # AWS no longer validates this thumbprint for GitHub's IdP - it uses its own
   # trust store - but the API still requires the field to be populated.
@@ -97,12 +97,18 @@ data "aws_iam_policy_document" "ci_trust" {
       values   = ["sts.amazonaws.com"]
     }
 
-    # Scoped to one branch of one repo. A run on any other branch, or in a
-    # fork, cannot assume this role.
+    # TEMPORARY DIAGNOSTIC - tighten back to StringEquals on the exact branch
+    # once OIDC is confirmed working. A wildcard here lets ANY branch, tag or
+    # pull request in this repo assume the role, which is precisely the
+    # protection we want restored.
+    #
+    # Purpose: isolate whether the `sub` claim is the failing condition. If the
+    # wildcard succeeds, the ref portion was the mismatch. If it still fails,
+    # `sub` was never the problem and the fault is elsewhere.
     condition {
-      test     = "StringEquals"
+      test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_owner}/${var.github_repo}:ref:refs/heads/${var.deploy_branch}"]
+      values   = ["repo:${var.github_owner}/${var.github_repo}:*"]
     }
   }
 }
