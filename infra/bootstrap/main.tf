@@ -91,34 +91,33 @@ data "aws_iam_policy_document" "ci_trust" {
       identifiers = [aws_iam_openid_connect_provider.github.arn]
     }
 
-    # TEMPORARY DIAGNOSTIC - restore to StringEquals "sts.amazonaws.com" once
-    # OIDC is working.
-    #
-    # Purpose: with `sub` already wildcarded, this is the only other condition.
-    # If assumption now succeeds, `aud` was the mismatch. If it still fails,
-    # neither condition is at fault and the problem is the Principal binding or
-    # an account-level policy.
-    #
-    # This is safe to leave briefly: `sub` below still restricts assumption to
-    # this repository, so the role is not exposed to other GitHub accounts.
     condition {
-      test     = "StringLike"
+      test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:aud"
-      values   = ["*"]
+      values   = ["sts.amazonaws.com"]
     }
 
-    # TEMPORARY DIAGNOSTIC - tighten back to StringEquals on the exact branch
-    # once OIDC is confirmed working. A wildcard here lets ANY branch, tag or
-    # pull request in this repo assume the role, which is precisely the
-    # protection we want restored.
+    # IMMUTABLE SUBJECT CLAIM FORMAT.
     #
-    # Purpose: isolate whether the `sub` claim is the failing condition. If the
-    # wildcard succeeds, the ref portion was the mismatch. If it still fails,
-    # `sub` was never the problem and the fault is elsewhere.
+    # Repositories created after 2026-07-15 embed immutable numeric ids in the
+    # OIDC subject, and renames/transfers after that date migrate to it too:
+    #
+    #   repo:<owner>@<owner_id>/<repo>@<repo_id>:ref:refs/heads/<branch>
+    #
+    # NOT the name-only form that nearly every tutorial and AWS doc still
+    # shows. Getting this wrong fails as a bare AccessDenied with no hint that
+    # the claim format is the issue - and a name-only WILDCARD fails too, since
+    # the literal owner/repo text is not present in the claim at all.
+    # See https://github.blog/changelog/2026-04-23-immutable-subject-claims-for-github-actions-oidc-tokens/
+    #
+    # Scoped to one branch of one repo. A run on any other branch, or in a
+    # fork, cannot assume this role. The ids make it immune to renames.
     condition {
-      test     = "StringLike"
+      test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_owner}/${var.github_repo}:*"]
+      values = [
+        "repo:${var.github_owner}@${var.github_owner_id}/${var.github_repo}@${var.github_repo_id}:ref:refs/heads/${var.deploy_branch}"
+      ]
     }
   }
 }

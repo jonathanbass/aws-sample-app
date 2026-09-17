@@ -20,6 +20,23 @@ variable "github_repo" {
   default     = "aws-sample-app"
 }
 
+# GitHub now embeds IMMUTABLE numeric IDs in the OIDC subject claim:
+#   repo:<owner>@<owner_id>/<repo>@<repo_id>:ref:refs/heads/<branch>
+# Almost every tutorial still shows the old name-only form, which no longer
+# matches. Find the real values in a CloudTrail AssumeRoleWithWebIdentity
+# event's userIdentity.userName, or via the GitHub API:
+#   https://api.github.com/users/<owner>      -> .id
+#   https://api.github.com/repos/<owner>/<repo> -> .id
+variable "github_owner_id" {
+  description = "Numeric GitHub account id of the owner."
+  type        = string
+}
+
+variable "github_repo_id" {
+  description = "Numeric GitHub repository id."
+  type        = string
+}
+
 variable "deploy_branch" {
   description = "Only workflow runs on this branch may assume the CI role."
   type        = string
