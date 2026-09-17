@@ -1,0 +1,14 @@
+# Copy to terraform.tfvars and fill in. terraform.tfvars is gitignored.
+
+# Must be globally unique across all of AWS and must not already exist.
+# Suggestion: add a random suffix, e.g. "aws-sample-app-tfstate-7f3a91".
+state_bucket_name = "CHANGE-ME-aws-sample-app-tfstate-XXXXXX"
+
+# Your GitHub username or org - the owner segment of the repo URL.
+github_owner = "CHANGE-ME"
+
+# Defaults below are fine unless you renamed things.
+# github_repo   = "aws-sample-app"
+# deploy_branch = "main"
+# aws_region    = "eu-west-1"
+# project_name  = "aws-sample-app"

@@ -1,0 +1,20 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AmplifyReadOnly",
+      "Effect": "Allow",
+      "Action": [
+        "amplify:ListApps",
+        "amplify:GetApp",
+        "amplify:ListBranches",
+        "amplify:GetBranch",
+        "amplify:ListJobs",
+        "amplify:GetJob",
+        "amplify:ListDomainAssociations",
+        "amplify:GetDomainAssociation"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
