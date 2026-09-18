@@ -30,7 +30,11 @@ jobs:
     name: detect changes
     runs-on: ubuntu-latest
     outputs:
-      ingest: ${{ steps.filter.outputs.ingest || github.event_name == 'workflow_dispatch' }}
+      # NOTE the explicit `== 'true'`. dorny/paths-filter emits the STRING
+      # 'false', and a non-empty string is truthy in a GitHub expression - so
+      # `steps.filter.outputs.ingest || ...` short-circuits to 'false' and the
+      # workflow_dispatch fallback never fires. Compare, do not coerce.
+      ingest: ${{ steps.filter.outputs.ingest == 'true' || github.event_name == 'workflow_dispatch' }}
     steps:
       - uses: actions/checkout@v5
       - uses: dorny/paths-filter@v3
@@ -51,20 +55,6 @@ jobs:
       http_api_url: ${{ steps.outputs.outputs.http_api_url }}
     steps:
       - uses: actions/checkout@v5
-
-      # TEMPORARY DIAGNOSTIC - remove once OIDC is working.
-      # Prints the exact values GitHub uses to build the OIDC `sub` claim, so
-      # it can be compared byte-for-byte against the role's trust policy.
-      - name: Show OIDC claim inputs
-        run: |
-          echo "repository       : ${{ github.repository }}"
-          echo "repository_owner : ${{ github.repository_owner }}"
-          echo "ref              : ${{ github.ref }}"
-          echo "event_name       : ${{ github.event_name }}"
-          echo "role arn length  : ${#ROLE_ARN}"
-          echo "expected sub     : repo:${{ github.repository }}:ref:${{ github.ref }}"
-        env:
-          ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
 
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v5
