@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- IsLambdaProject is set once Program.cs exists. It forces OutputType=Exe,
-       which fails the build without an entry point. -->
+  <PropertyGroup>
+    <IsLambdaProject>true</IsLambdaProject>
+  </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Amazon.Lambda.Core" />

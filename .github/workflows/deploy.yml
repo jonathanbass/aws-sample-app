@@ -52,6 +52,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       ingest_function_name: ${{ steps.outputs.outputs.ingest_function_name }}
+      relay_function_name: ${{ steps.outputs.outputs.relay_function_name }}
       http_api_url: ${{ steps.outputs.outputs.http_api_url }}
     steps:
       - uses: actions/checkout@v5
@@ -93,6 +94,7 @@ jobs:
         working-directory: infra/main
         run: |
           echo "ingest_function_name=$(terraform output -raw ingest_submit_function_name)" >> "$GITHUB_OUTPUT"
+          echo "relay_function_name=$(terraform output -raw ingest_outbox_relay_function_name)" >> "$GITHUB_OUTPUT"
           echo "http_api_url=$(terraform output -raw http_api_url)" >> "$GITHUB_OUTPUT"
 
       - name: Summary
@@ -124,21 +126,38 @@ jobs:
       - name: Test
         run: dotnet test src/AwsSampleApp.slnx -c Release
 
-      - name: Publish
+      - name: Publish the submit function
         run: >
           dotnet publish src/Ingest/Ingest.Api/Ingest.Api.csproj
           -c Release -r linux-arm64 --self-contained false
           -o publish/ingest-api
 
-      - name: Zip
+      - name: Zip the submit function
         working-directory: publish/ingest-api
         run: zip -r ../ingest-api.zip .
 
-      - name: Update function code
+      - name: Deploy the submit function
         run: >
           aws lambda update-function-code
           --function-name ${{ needs.terraform.outputs.ingest_function_name }}
           --zip-file fileb://publish/ingest-api.zip
+          --publish
+
+      - name: Publish the outbox relay
+        run: >
+          dotnet publish src/Ingest/Ingest.OutboxRelay/Ingest.OutboxRelay.csproj
+          -c Release -r linux-arm64 --self-contained false
+          -o publish/ingest-outbox-relay
+
+      - name: Zip the outbox relay
+        working-directory: publish/ingest-outbox-relay
+        run: zip -r ../ingest-outbox-relay.zip .
+
+      - name: Deploy the outbox relay
+        run: >
+          aws lambda update-function-code
+          --function-name ${{ needs.terraform.outputs.relay_function_name }}
+          --zip-file fileb://publish/ingest-outbox-relay.zip
           --publish
 
 # ---------------------------------------------------------------------------

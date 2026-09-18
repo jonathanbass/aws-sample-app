@@ -25,3 +25,13 @@ output "ingest_submit_function_name" {
   description = "Lambda the deploy-ingest workflow job pushes code to."
   value       = aws_lambda_function.ingest_submit.function_name
 }
+
+output "text_submitted_queue_url" {
+  description = "SQS FIFO queue the relay publishes TextSubmitted events to."
+  value       = aws_sqs_queue.text_submitted.url
+}
+
+output "ingest_outbox_relay_function_name" {
+  description = "Lambda the deploy-ingest workflow job pushes relay code to."
+  value       = aws_lambda_function.ingest_outbox_relay.function_name
+}

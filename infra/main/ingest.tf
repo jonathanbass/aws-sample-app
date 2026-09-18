@@ -27,11 +27,20 @@ resource "aws_dynamodb_table" "messages" {
     type = "S"
   }
 
-  # The stream is enabled NOW even though nothing consumes it until Phase 3.
-  # Turning it on later is a change to a live table; enabling it up front costs
-  # nothing (streams have no idle charge) and keeps Phase 3 additive.
   stream_enabled   = true
   stream_view_type = "NEW_IMAGE"
+
+  # Only the OUTBOX item carries this attribute (design D16). The domain item
+  # deliberately omits it, so the message itself never expires. DynamoDB
+  # ignores an item that has no value for the named attribute.
+  #
+  # An expired item is deleted within about 48 hours of its TTL, not at it, and
+  # the deletion writes a REMOVE record to the stream above. OutboxEventReader
+  # filters those out - without that filter every expired item would republish.
+  ttl {
+    attribute_name = "expiresAt"
+    enabled        = true
+  }
 }
 
 # ---------------------------------------------------------------------------
