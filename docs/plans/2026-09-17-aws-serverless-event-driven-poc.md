@@ -88,7 +88,17 @@ Not a development task. See `infra/bootstrap/README.md` for the full runbook.
 
 ---
 
-## Phase 2: Submit text and persist it
+## Phase 2: Submit text and persist it — ✅ VERIFIED IN PRODUCTION 2026-09-18
+
+**Evidence:** `POST https://31ucswmkpc.execute-api.eu-west-1.amazonaws.com/messages` returned `202` with `{"messageId":"01a0b3b7-3bec-75a2-88d7-242dd43f0111"}`. A scan of `aws-sample-app-messages` returned two rows sharing `pk = MESSAGE#01a0b3b7-...`, with `sk` of `MESSAGE` and `OUTBOX`.
+
+**A malformed body returned `400`** with the handler's own message. This confirms Cycle 8 of the tests in production.
+
+**Windows note:** `curl` on PowerShell breaks a JSON body that uses `\"` escapes. PowerShell keeps the backslashes and the Lambda receives invalid JSON. Use `Invoke-WebRequest` with a single-quoted body instead:
+
+```powershell
+Invoke-WebRequest -Method Post -Uri "<api-url>/messages" -ContentType "application/json" -Body '{"text":"hello"}' | Select-Object StatusCode, Content
+```
 
 **Commit scope:** `POST /messages` works against real AWS; domain item and outbox item written atomically.
 **Verification:** `curl -X POST <api-url>/messages -H 'content-type: application/json' -d '{"text":"hello"}'` → `202`, and both items visible via `aws dynamodb scan --table-name <messages>`.
@@ -181,6 +191,7 @@ Not a development task. See `infra/bootstrap/README.md` for the full runbook.
 - [ ] **Task 3.2: Implement `TextSubmitted` and the shared serializer options**
 
   **Files:** Create `src/Contracts/TextSubmitted.cs`, `src/Contracts/EventJson.cs`
+  **Acceptance criteria:** The event carries **both** `MessageId` and `Text`, plus `SubmittedAt`. Per design doc D15 the id must reach the SPA, so it must be on every payload in the chain. A text-only event blocks any later per-message operation, such as a delete.
   **Constraints:** One shared `JsonSerializerOptions` (`JsonSerializerDefaults.Web`) referenced by both producer and consumer. Both ends are ours, so no `[JsonPropertyName]` attributes are needed — but the round-trip test is what keeps that true.
 
 - [ ] **Task 3.3: Tests for `OutboxRelayService`**
@@ -293,7 +304,7 @@ Not a development task. See `infra/bootstrap/README.md` for the full runbook.
 - [ ] **Task 5.3: Handler contract tests for the consumer**
 
   **Files:** Create `src/Notifier/Notifier.Consumer.Tests/FunctionTests.cs`
-  **Acceptance criteria:** An `SQSEvent` carrying a serialized `TextSubmitted` broadcasts its text; a malformed record is reported as a batch item failure rather than throwing
+  **Acceptance criteria:** An `SQSEvent` carrying a serialized `TextSubmitted` broadcasts **both the message id and the text** (design doc D15); a malformed record is reported as a batch item failure rather than throwing
 
 - [ ] **Task 5.4: Implement the consumer Lambda adapter (make tests pass)**
 
@@ -352,6 +363,7 @@ Not a development task. See `infra/bootstrap/README.md` for the full runbook.
 - [ ] **Task 6.5: Implement the form and message list (make tests pass)**
 
   **Files:** Create `web/src/components/SubmitForm.tsx`, `web/src/components/MessageList.tsx`, wire into `App.tsx`
+  **Acceptance criteria:** Each list row uses the `messageId` as its React `key`, never the array index (design doc D15). The id must be held in component state, not discarded after render, so a later delete or edit can address one row.
 
 - [ ] **Task 6.6: Amplify monorepo build spec**
 
@@ -400,6 +412,34 @@ Not a development task. See `infra/bootstrap/README.md` for the full runbook.
   **Acceptance criteria:** HTTP API CORS `allow_origins` is the Amplify domain rather than `*`
 
 **→ Phase 6 complete. The POC is done.**
+
+---
+
+## Phase 7: Delete a message — AGREED IN SHAPE, NOT SCHEDULED
+
+**Status:** The route is agreed: `DELETE /messages/{id}` — same resource as the `POST`, different verb (user, 2026-09-18). Build it after Phase 6, or earlier if you want a second event type sooner.
+
+This is a full vertical slice, not one task. It repeats the whole Phase 2 to Phase 5 chain for a second event.
+
+**One decision must be made before this phase starts: does a delete broadcast?**
+
+| Option | What it means | Cost |
+|---|---|---|
+| **Broadcast the delete** | A `TextDeleted` event goes through the same outbox, queue and WebSocket. Every open browser removes the row. | A second event type, a second outbox item shape, a second consumer branch. Proves the pattern generalises past one event. |
+| **Do not broadcast** | The delete removes the rows. Other browsers keep a stale row until reload. | Much smaller. Weakens the demo, because the deleting browser is the only one that stays correct. |
+
+Broadcast is the answer that suits the project's purpose. A delete that does not reach other browsers shows the architecture failing at the one job it exists to do.
+
+### Tasks (outline only — expand when the phase is scheduled)
+
+- [ ] **Task 7.1: Decide the broadcast question above**
+- [ ] **Task 7.2: Tests for the delete handler** — `Guid.Empty` and an unknown id both return `404`, not `500`
+- [ ] **Task 7.3: Implement the delete handler** — one `TransactWriteItems` removes the domain item and writes a `TextDeleted` outbox item, so the delete and its event stay atomic
+- [ ] **Task 7.4: Terraform** — add the `DELETE /messages/{id}` route and `dynamodb:DeleteItem` on the execution role
+- [ ] **Task 7.5: Extend the relay and the consumer** to carry the second event type
+- [ ] **Task 7.6: SPA** — a delete control per row, keyed by the `messageId` from D15
+
+**Note on the domain item:** the delete must remove the `MESSAGE` sort key. Do not remove a spent `OUTBOX` item in the same call — see the retention question in Phase 3.
 
 ---
 

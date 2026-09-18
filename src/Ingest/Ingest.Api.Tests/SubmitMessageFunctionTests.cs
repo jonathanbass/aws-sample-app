@@ -1,3 +1,4 @@
+using Ingest.Storage;
 using System.Net;
 using System.Text.Json;
 using Amazon.DynamoDBv2.Model;

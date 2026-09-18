@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The DynamoDB item schema. Shared by Ingest.Api, which WRITES the items,
+       and Ingest.OutboxRelay, which READS them from the stream. Both ends must
+       agree on the attribute names, so they must come from one place. -->
+
+  <ItemGroup>
+    <PackageReference Include="AWSSDK.DynamoDBv2" />
+  </ItemGroup>
+
+</Project>

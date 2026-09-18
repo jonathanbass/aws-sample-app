@@ -2,5 +2,10 @@
   <Folder Name="/Ingest/">
     <Project Path="Ingest/Ingest.Api.Tests/Ingest.Api.Tests.csproj" />
     <Project Path="Ingest/Ingest.Api/Ingest.Api.csproj" />
+    <Project Path="Ingest/Ingest.OutboxRelay.Tests/Ingest.OutboxRelay.Tests.csproj" />
+    <Project Path="Ingest/Ingest.OutboxRelay/Ingest.OutboxRelay.csproj" />
+    <Project Path="Ingest/Ingest.Storage/Ingest.Storage.csproj" />
   </Folder>
+  <Project Path="Contracts.Tests/Contracts.Tests.csproj" />
+  <Project Path="Contracts/Contracts.csproj" />
 </Solution>

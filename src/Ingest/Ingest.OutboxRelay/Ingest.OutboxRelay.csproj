@@ -1,23 +1,19 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <IsLambdaProject>true</IsLambdaProject>
-  </PropertyGroup>
+  <!-- IsLambdaProject is set once Program.cs exists. It forces OutputType=Exe,
+       which fails the build without an entry point. -->
 
   <ItemGroup>
     <PackageReference Include="Amazon.Lambda.Core" />
-    <PackageReference Include="Amazon.Lambda.APIGatewayEvents" />
+    <PackageReference Include="Amazon.Lambda.DynamoDBEvents" />
     <PackageReference Include="Amazon.Lambda.RuntimeSupport" />
     <PackageReference Include="Amazon.Lambda.Serialization.SystemTextJson" />
-    <PackageReference Include="AWSSDK.DynamoDBv2" />
+    <PackageReference Include="AWSSDK.SQS" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Contracts\Contracts.csproj" />
     <ProjectReference Include="..\Ingest.Storage\Ingest.Storage.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <InternalsVisibleTo Include="Ingest.Api.Tests" />
   </ItemGroup>
 
 </Project>

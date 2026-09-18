@@ -32,6 +32,8 @@ Hard constraint discovered during design: **the AWS account has no free-tier run
 | D11 | **Wolverine dropped. Plain ASP.NET Core Minimal API + AWS SDK for .NET.** | With D1 and D2, every feature Wolverine was chosen for is gone: no outbox (no DynamoDB provider), no listener loop (the event source mapping delivers), and its retry policies are redundant against — and can conflict with — SQS redrive + ESM retry attempts. What remained was endpoint mapping and mediator-style dispatch, which Minimal APIs and DI already do. Dropping it also removes the largest unvalidated risk in the plan (Wolverine's runtime codegen vs the ASP.NET-on-Lambda shim) and makes the outbox explicit, readable application code — which suits a POC whose purpose is to *demonstrate* the pattern. | Keep Wolverine as a thin dispatcher (framework weight and cold-start codegen for no capability). Move service 1 to a persistent host + Postgres so the real Wolverine outbox runs (~$7/mo always-on — **rejected on cost**, and the only option that would genuinely prove Wolverine). |
 | D12 | **Region `eu-west-1` (Dublin). Broadcast to all connections. No auth.** | User decisions. Broadcast keeps the Consumer trivial; auth is out of scope for a POC. | Per-connection filtering; Cognito or API-key auth on both APIs. |
 | D13 | **Lambda-first: no ASP.NET Core hosting anywhere.** All four Lambdas are plain `FunctionHandler` entry points over AWS event types (`APIGatewayHttpApiV2ProxyRequest`, `DynamoDBEvent`, `SQSEvent`), each wrapping a small constructor-injected service. | Refines D11. With one HTTP endpoint, `Amazon.Lambda.AspNetCoreServer.Hosting` bought only a routing table and a cold-start shim. Dropping it makes all four functions structurally identical, removes a dependency, and removes the last framework between the code and the runtime. User explicitly chose Lambda-first and accepted a testing change to preserve it. | ASP.NET Minimal API on Lambda (an odd-one-out shape for one endpoint; shim on every cold start). `Amazon.Lambda.Annotations` source generators (more magic, not less). |
+| D16 | **The outbox item carries a TTL of one hour. DynamoDB deletes it.** | The outbox item exists only to be read by the stream and relayed to SQS. After that it is dead data, and without a TTL the table holds two copies of every message for ever. A TTL is one attribute on the existing write — no extra call, no added latency. One hour leaves the row readable while a failure is investigated. **DynamoDB deletes an expired item within about 48 hours of the TTL time, not at it.** The deletion writes a `REMOVE` stream record, so the relay MUST ignore `REMOVE` or it republishes every expired message. | Delete the item in the relay Lambda (an extra write per message, plus a second stream record the relay must then filter). Leave the items for ever (simplest, unbounded growth, wrong as a pattern). |
+| D15 | **The message id travels the whole chain, from the API response to the SPA list row.** Every payload carries it: the `POST` response, the outbox item, `TextSubmitted`, the SQS message, the WebSocket push, and the rendered row. | The id is the DynamoDB partition key (`MESSAGE#<id>`), so any later operation on one message — a delete, an edit, a retry — needs it at the point of use. A payload that carries only the text forces a lookup by content, which is not unique. The id also gives React a stable list key; an array index breaks when a row is removed. Requested explicitly by the user on 2026-09-18. | Text-only payloads (cheaper, but blocks every per-message operation later). Generating an id in the SPA (would not match the stored id). |
 | D14 | **Testing: unit tests over small injectable services + handler contract tests. No BDD Context pattern.** | User decision. Handler contract tests construct a real AWS event, invoke the real `FunctionHandler`, and assert the real response type — testing the production entry point rather than a hosting abstraction. `WebApplicationFactory` is not available and not wanted (D13). | `WebApplicationFactory` API tests (require ASP.NET hosting, contradicting D13). BDD Context split (ceremony disproportionate to the logic). LocalStack-based integration tests (yak-shave before any feature works; DynamoDB Local is enough). |
 
 ## 3. Architecture
@@ -124,6 +126,27 @@ Cite these rather than re-deriving them.
 - **Terraform 1.11+ does S3 native state locking** via `use_lockfile = true`; `dynamodb_table` is deprecated. Source: <https://developer.hashicorp.com/terraform/language/backend/s3>
 - **Amplify + Terraform + GitHub is janky.** `oauth_token` still wires the deprecated OAuth path rather than the GitHub App (terraform-provider-aws#25122); `access_token` works only with classic `ghp_` PATs, not fine-grained ones (#31643); GitHub App tokens exceed a 255-char validation cap (#49565). Hence D9.
 - **Amplify monorepo needs both** an `applications:` array with `appRoot: web` in `amplify.yml` AND the `AMPLIFY_MONOREPO_APP_ROOT` env var. AWS docs state that for apps created via CloudFormation (and therefore Terraform) this variable **must be set manually** — Terraform sets it in `environment_variables`. Source: <https://docs.aws.amazon.com/amplify/latest/userguide/monorepo-configuration.html>
+- **GitHub OIDC uses IMMUTABLE subject claims. This cost several hours on 2026-09-17.** Repositories created after 2026-07-15 (and any repository renamed or transferred after that date) embed numeric ids in the OIDC `sub` claim:
+
+  ```
+  repo:<owner>@<owner_id>/<repo>@<repo_id>:ref:refs/heads/<branch>
+  repo:jonathanbass@7910256/aws-sample-app@1374195227:ref:refs/heads/main
+  ```
+
+  This is NOT the name-only form that AWS documentation and every tutorial still show. A trust policy built from the name-only form fails with a bare `AccessDenied` and no hint about the claim format.
+
+  **The trap:** a name-only WILDCARD (`repo:owner/repo:*`) fails too, because the literal text `owner/repo` never appears in the real claim — the ids sit inside it. So relaxing the condition changes nothing, which falsely proves that `sub` is not the problem and sends you to look at the audience, the principal, the thumbprint and permissions boundaries. All of those are dead ends.
+
+  **The diagnostic that ends it in one step:** read the real claim from CloudTrail, in `userIdentity.userName`:
+
+  ```
+  aws cloudtrail lookup-events --lookup-attributes AttributeKey=EventName,AttributeValue=AssumeRoleWithWebIdentity --max-results 5 --query "Events[].CloudTrailEvent" --output text
+  ```
+
+  Go to CloudTrail as soon as the inputs all look correct and it still fails. Do not re-derive what the claim should be. Source: <https://github.blog/changelog/2026-04-23-immutable-subject-claims-for-github-actions-oidc-tokens/>
+
+- **`runtime = "dotnet10"` works on AWS provider 6.65.0.** The open provider issue #45864 was a non-issue in practice. Verified by a successful apply on 2026-09-17.
+
 - **AWS free tier changed 2025-07-15.** Accounts opened before that date get the classic 12-month tier; accounts opened after get $100–200 in credits and only 6 months of free EC2/RDS. This account is pre-cutoff and over a year old, so neither applies.
 
 ## 6. Which Global Rules Apply

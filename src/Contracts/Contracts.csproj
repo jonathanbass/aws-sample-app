@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Transport-agnostic event contracts shared by the publisher (Ingest) and
+       the consumer (Notifier). No AWS dependency: this project must stay
+       usable from any host. -->
+
+</Project>

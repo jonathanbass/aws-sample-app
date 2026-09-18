@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using Ingest.Api;
+using Ingest.Storage;
 
 namespace Ingest.Api.Tests;
 
@@ -45,6 +46,31 @@ public class MessageItemsTests
         items.OutboxItem[MessageItems.MessageIdAttribute].S.Should().Be(MessageId.ToString());
         items.OutboxItem[MessageItems.SubmittedAtAttribute].S
             .Should().Be("2026-09-17T14:30:00.0000000+00:00");
+    }
+
+    [Fact]
+    public void Create_expires_the_outbox_item_one_hour_after_submission()
+    {
+        MessageItems items = MessageItems.Create(MessageId, "hello world", SubmittedAt);
+
+        // DynamoDB TTL reads Unix epoch SECONDS from a Number attribute.
+        // Milliseconds, or a String attribute, are ignored in silence and the
+        // row never expires.
+        long expected = SubmittedAt.AddHours(1).ToUnixTimeSeconds();
+
+        items.OutboxItem[MessageItems.ExpiresAtAttribute].N
+            .Should().Be(expected.ToString());
+    }
+
+    [Fact]
+    public void Create_does_not_expire_the_domain_item()
+    {
+        MessageItems items = MessageItems.Create(MessageId, "hello world", SubmittedAt);
+
+        // The domain item IS the message. A TTL on it would delete every
+        // message one hour after it arrived, and the table uses ONE ttl
+        // attribute name for both item types.
+        items.DomainItem.Should().NotContainKey(MessageItems.ExpiresAtAttribute);
     }
 
     [Fact]
