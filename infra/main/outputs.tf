@@ -35,3 +35,23 @@ output "ingest_outbox_relay_function_name" {
   description = "Lambda the deploy-ingest workflow job pushes relay code to."
   value       = aws_lambda_function.ingest_outbox_relay.function_name
 }
+
+output "websocket_url" {
+  description = "wss:// URL the SPA connects to."
+  value       = aws_apigatewayv2_stage.notifier.invoke_url
+}
+
+output "websocket_management_endpoint" {
+  description = "HTTPS endpoint the Phase 5 consumer calls PostToConnection on. NOT the wss:// URL."
+  value       = "https://${aws_apigatewayv2_api.notifier.id}.execute-api.${var.aws_region}.amazonaws.com/${aws_apigatewayv2_stage.notifier.name}"
+}
+
+output "connections_table_name" {
+  description = "DynamoDB table holding live WebSocket connection ids."
+  value       = aws_dynamodb_table.connections.name
+}
+
+output "notifier_connections_function_name" {
+  description = "Lambda the deploy-notifier workflow job pushes code to."
+  value       = aws_lambda_function.notifier_connections.function_name
+}

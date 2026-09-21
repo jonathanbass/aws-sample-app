@@ -174,7 +174,13 @@ Invoke-WebRequest -Method Post -Uri "<api-url>/messages" -ContentType "applicati
 
 ---
 
-## Phase 3: The outbox drains to the queue
+## Phase 3: The outbox drains to the queue — ✅ VERIFIED IN PRODUCTION 2026-09-18
+
+**Evidence:** `aws-sample-app-text-submitted.fifo` held two events, one for each message submitted — texts `hello` and `ttl check`. One event per message, never two, which proves `OutboxEventReader` filters the domain item out. The `expiresAt` attribute on an outbox item read `1789738819`, exactly 3600 seconds after the version 7 message id's embedded timestamp.
+
+**Verify from the AWS console, not the CLI.** `terraform-user` has no SQS, Lambda or CloudWatch Logs permissions, and granting them is not worth it for a read. The console uses the root login. SQS → the queue → Send and receive messages → Poll for messages.
+
+**Expect events for earlier messages.** The trigger starts at `TRIM_HORIZON` and the stream retains records for 24 hours, so the first deployment relays everything submitted that day. That is correct, not a fault.
 
 **Commit scope:** The outbox item becomes a `TextSubmitted` event on an SQS FIFO queue.
 **Verification:** `curl` as in Phase 2, then `aws sqs receive-message` → the event is there within ~1s.

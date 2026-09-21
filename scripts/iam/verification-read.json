@@ -1,0 +1,49 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ReadQueues",
+      "Effect": "Allow",
+      "Action": [
+        "sqs:ListQueues",
+        "sqs:GetQueueUrl",
+        "sqs:GetQueueAttributes",
+        "sqs:ReceiveMessage"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ReadFunctions",
+      "Effect": "Allow",
+      "Action": [
+        "lambda:GetFunction",
+        "lambda:GetFunctionConfiguration",
+        "lambda:ListFunctions",
+        "lambda:ListEventSourceMappings",
+        "lambda:GetEventSourceMapping"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ReadLogs",
+      "Effect": "Allow",
+      "Action": [
+        "logs:DescribeLogGroups",
+        "logs:DescribeLogStreams",
+        "logs:GetLogEvents",
+        "logs:FilterLogEvents",
+        "logs:StartLiveTail",
+        "logs:StopLiveTail"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ReadApis",
+      "Effect": "Allow",
+      "Action": [
+        "apigateway:GET"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
