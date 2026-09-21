@@ -9,6 +9,10 @@
   <Folder Name="/Notifier/">
     <Project Path="Notifier/Notifier.Connections.Tests/Notifier.Connections.Tests.csproj" />
     <Project Path="Notifier/Notifier.Connections/Notifier.Connections.csproj" />
+    <Project Path="Notifier/Notifier.Consumer.Tests/Notifier.Consumer.Tests.csproj" />
+    <Project Path="Notifier/Notifier.Consumer/Notifier.Consumer.csproj" />
+    <Project Path="Notifier/Notifier.Storage/Notifier.Storage.csproj" />
+    <Project Path="Notifier/Notifier.TestSupport/Notifier.TestSupport.csproj" />
   </Folder>
   <Project Path="Contracts.Tests/Contracts.Tests.csproj" />
   <Project Path="Contracts/Contracts.csproj" />

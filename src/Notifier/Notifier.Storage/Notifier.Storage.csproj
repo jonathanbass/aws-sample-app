@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The connections table schema and its repository. Shared by
+       Notifier.Connections, which WRITES connection ids, and Notifier.Consumer,
+       which READS them to broadcast. Both ends must agree, so it lives here. -->
+
+  <ItemGroup>
+    <PackageReference Include="AWSSDK.DynamoDBv2" />
+  </ItemGroup>
+
+</Project>

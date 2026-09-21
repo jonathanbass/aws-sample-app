@@ -1,3 +1,4 @@
+using Notifier.Storage;
 using Amazon.Lambda.APIGatewayEvents;
 
 namespace Notifier.Connections;

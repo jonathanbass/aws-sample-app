@@ -6,12 +6,12 @@
     <PackageReference Include="xunit.runner.visualstudio" />
     <PackageReference Include="coverlet.collector" />
     <PackageReference Include="AwesomeAssertions" />
+    <PackageReference Include="NSubstitute" />
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
-    <PackageReference Include="Testcontainers" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Notifier.Connections\Notifier.Connections.csproj" />
+    <ProjectReference Include="..\Notifier.Consumer\Notifier.Consumer.csproj" />
     <ProjectReference Include="..\Notifier.TestSupport\Notifier.TestSupport.csproj" />
   </ItemGroup>
 

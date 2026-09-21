@@ -1,4 +1,4 @@
-namespace Notifier.Connections;
+namespace Notifier.Storage;
 
 /// <summary>
 /// The connections table schema. The consumer Lambda in Phase 5 reads the same

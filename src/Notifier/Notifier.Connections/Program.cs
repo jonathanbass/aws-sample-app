@@ -1,3 +1,4 @@
+using Notifier.Storage;
 using Amazon.DynamoDBv2;
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.Lambda.RuntimeSupport;

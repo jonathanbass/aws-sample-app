@@ -1,3 +1,5 @@
+using Notifier.TestSupport;
+using Notifier.Storage;
 using Amazon.DynamoDBv2.Model;
 using AwesomeAssertions;
 using Microsoft.Extensions.Time.Testing;
@@ -89,5 +91,18 @@ public class ConnectionRegistryTests : IClassFixture<ConnectionsTableFixture>
         Func<Task> remove = () => _registry.RemoveAsync("never-stored", CancellationToken.None);
 
         await remove.Should().NotThrowAsync();
+    }
+
+    [Fact]
+    public async Task ListAsync_returns_every_stored_connection()
+    {
+        await _registry.AddAsync("list-one", CancellationToken.None);
+        await _registry.AddAsync("list-two", CancellationToken.None);
+
+        // The Phase 5 broadcast pushes to every open socket, so it needs them
+        // all. The table has no sort key, so this is a scan.
+        IReadOnlyList<string> connections = await _registry.ListAsync(CancellationToken.None);
+
+        connections.Should().Contain(["list-one", "list-two"]);
     }
 }

@@ -55,3 +55,8 @@ output "notifier_connections_function_name" {
   description = "Lambda the deploy-notifier workflow job pushes code to."
   value       = aws_lambda_function.notifier_connections.function_name
 }
+
+output "notifier_consumer_function_name" {
+  description = "Lambda the deploy-notifier workflow job pushes consumer code to."
+  value       = aws_lambda_function.notifier_consumer.function_name
+}

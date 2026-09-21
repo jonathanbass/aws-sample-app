@@ -236,7 +236,13 @@ Invoke-WebRequest -Method Post -Uri "<api-url>/messages" -ContentType "applicati
 
 ---
 
-## Phase 4: WebSocket connection registry
+## Phase 4: WebSocket connection registry — ✅ VERIFIED IN PRODUCTION 2026-09-21
+
+**Evidence:** `wscat -c wss://<api-id>.execute-api.eu-west-1.amazonaws.com/live` printed `Connected`. A row appeared in `aws-sample-app-connections` with a `connectionId` and an `expiresAt`. Ctrl+C removed the row.
+
+**The handshake itself is a test.** API Gateway refuses the connection unless `$connect` returns 200, so `Connected` alone proves the Lambda ran real code and succeeded.
+
+**Verify from the console.** DynamoDB → left sidebar **Explore items** → the table → **Run**. Region must be Ireland (eu-west-1).
 
 **Commit scope:** Browsers can hold a WebSocket connection and the system knows who is connected.
 **Verification:** `wscat -c <ws-url>` → row appears in the connections table; close it → row disappears.

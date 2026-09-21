@@ -23,11 +23,13 @@
     <PackageVersion Include="Amazon.Lambda.RuntimeSupport" Version="2.2.1" />
     <PackageVersion Include="Amazon.Lambda.Serialization.SystemTextJson" Version="3.0.1" />
     <PackageVersion Include="Amazon.Lambda.DynamoDBEvents" Version="4.0.0" />
+    <PackageVersion Include="Amazon.Lambda.SQSEvents" Version="3.0.1" />
   </ItemGroup>
 
   <ItemGroup Label="AWS SDK">
     <PackageVersion Include="AWSSDK.DynamoDBv2" Version="4.0.103.8" />
     <PackageVersion Include="AWSSDK.SQS" Version="4.0.100.14" />
+    <PackageVersion Include="AWSSDK.ApiGatewayManagementApi" Version="4.0.100.15" />
   </ItemGroup>
 
   <ItemGroup Label="Testing">

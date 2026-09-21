@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Test infrastructure shared by both Notifier test projects. Not a test
+       project itself: it holds no tests and must not be discovered as one. -->
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+
+    <!-- It references xunit for IAsyncLifetime, so `dotnet test` on the
+         solution would otherwise try to run it as a test assembly and fail
+         with "Testhost process exited with error". -->
+    <IsTestProject>false</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AWSSDK.DynamoDBv2" />
+    <PackageReference Include="Testcontainers" />
+    <PackageReference Include="xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Notifier.Storage\Notifier.Storage.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,7 +1,7 @@
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 
-namespace Notifier.Connections;
+namespace Notifier.Storage;
 
 public sealed class ConnectionRegistry
 {
@@ -46,4 +46,28 @@ public sealed class ConnectionRegistry
                 [ConnectionItem.PartitionKey] = new(connectionId),
             },
             cancellationToken);
+
+    /// <summary>
+    /// Every live connection id.
+    /// </summary>
+    /// <remarks>
+    /// A scan, because the table has no sort key and the broadcast needs all
+    /// rows. A scan is the wrong tool at scale; at POC scale the table holds
+    /// one row per open browser tab, so it costs almost nothing. Real fan-out
+    /// at volume would shard connections across partitions and query instead.
+    /// </remarks>
+    public async Task<IReadOnlyList<string>> ListAsync(CancellationToken cancellationToken)
+    {
+        ScanResponse response = await _dynamoDb.ScanAsync(
+            new ScanRequest
+            {
+                TableName = _tableName,
+                ProjectionExpression = ConnectionItem.PartitionKey,
+            },
+            cancellationToken);
+
+        return response.Items
+            .Select(item => item[ConnectionItem.PartitionKey].S)
+            .ToList();
+    }
 }
