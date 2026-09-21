@@ -60,6 +60,7 @@ jobs:
       ingest_function_name: ${{ steps.outputs.outputs.ingest_function_name }}
       relay_function_name: ${{ steps.outputs.outputs.relay_function_name }}
       connections_function_name: ${{ steps.outputs.outputs.connections_function_name }}
+      consumer_function_name: ${{ steps.outputs.outputs.consumer_function_name }}
       http_api_url: ${{ steps.outputs.outputs.http_api_url }}
       websocket_url: ${{ steps.outputs.outputs.websocket_url }}
     steps:
@@ -104,6 +105,7 @@ jobs:
           echo "ingest_function_name=$(terraform output -raw ingest_submit_function_name)" >> "$GITHUB_OUTPUT"
           echo "relay_function_name=$(terraform output -raw ingest_outbox_relay_function_name)" >> "$GITHUB_OUTPUT"
           echo "connections_function_name=$(terraform output -raw notifier_connections_function_name)" >> "$GITHUB_OUTPUT"
+          echo "consumer_function_name=$(terraform output -raw notifier_consumer_function_name)" >> "$GITHUB_OUTPUT"
           echo "http_api_url=$(terraform output -raw http_api_url)" >> "$GITHUB_OUTPUT"
           echo "websocket_url=$(terraform output -raw websocket_url)" >> "$GITHUB_OUTPUT"
 
@@ -207,6 +209,23 @@ jobs:
           aws lambda update-function-code
           --function-name ${{ needs.terraform.outputs.connections_function_name }}
           --zip-file fileb://publish/notifier-connections.zip
+          --publish
+
+      - name: Publish the consumer function
+        run: >
+          dotnet publish src/Notifier/Notifier.Consumer/Notifier.Consumer.csproj
+          -c Release -r linux-arm64 --self-contained false
+          -o publish/notifier-consumer
+
+      - name: Zip the consumer function
+        working-directory: publish/notifier-consumer
+        run: zip -r ../notifier-consumer.zip .
+
+      - name: Deploy the consumer function
+        run: >
+          aws lambda update-function-code
+          --function-name ${{ needs.terraform.outputs.consumer_function_name }}
+          --zip-file fileb://publish/notifier-consumer.zip
           --publish
 
 # ---------------------------------------------------------------------------
