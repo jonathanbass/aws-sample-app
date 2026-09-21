@@ -35,6 +35,7 @@ jobs:
       # `steps.filter.outputs.ingest || ...` short-circuits to 'false' and the
       # workflow_dispatch fallback never fires. Compare, do not coerce.
       ingest: ${{ steps.filter.outputs.ingest == 'true' || github.event_name == 'workflow_dispatch' }}
+      notifier: ${{ steps.filter.outputs.notifier == 'true' || github.event_name == 'workflow_dispatch' }}
     steps:
       - uses: actions/checkout@v5
       - uses: dorny/paths-filter@v3
@@ -46,6 +47,11 @@ jobs:
               - 'src/Contracts/**'
               - 'src/Directory.*.props'
               - 'src/Directory.Build.targets'
+            notifier:
+              - 'src/Notifier/**'
+              - 'src/Contracts/**'
+              - 'src/Directory.*.props'
+              - 'src/Directory.Build.targets'
 
   terraform:
     name: terraform apply
@@ -53,7 +59,9 @@ jobs:
     outputs:
       ingest_function_name: ${{ steps.outputs.outputs.ingest_function_name }}
       relay_function_name: ${{ steps.outputs.outputs.relay_function_name }}
+      connections_function_name: ${{ steps.outputs.outputs.connections_function_name }}
       http_api_url: ${{ steps.outputs.outputs.http_api_url }}
+      websocket_url: ${{ steps.outputs.outputs.websocket_url }}
     steps:
       - uses: actions/checkout@v5
 
@@ -95,11 +103,14 @@ jobs:
         run: |
           echo "ingest_function_name=$(terraform output -raw ingest_submit_function_name)" >> "$GITHUB_OUTPUT"
           echo "relay_function_name=$(terraform output -raw ingest_outbox_relay_function_name)" >> "$GITHUB_OUTPUT"
+          echo "connections_function_name=$(terraform output -raw notifier_connections_function_name)" >> "$GITHUB_OUTPUT"
           echo "http_api_url=$(terraform output -raw http_api_url)" >> "$GITHUB_OUTPUT"
+          echo "websocket_url=$(terraform output -raw websocket_url)" >> "$GITHUB_OUTPUT"
 
       - name: Summary
         run: |
           echo "HTTP API: ${{ steps.outputs.outputs.http_api_url }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "WebSocket: ${{ steps.outputs.outputs.websocket_url }}" >> "$GITHUB_STEP_SUMMARY"
 
   deploy-ingest:
     name: deploy ingest
@@ -160,10 +171,48 @@ jobs:
           --zip-file fileb://publish/ingest-outbox-relay.zip
           --publish
 
+  deploy-notifier:
+    name: deploy notifier
+    needs: [terraform, changes]
+    if: needs.changes.outputs.notifier == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Test
+        run: dotnet test src/AwsSampleApp.slnx -c Release
+
+      - name: Publish the connections function
+        run: >
+          dotnet publish src/Notifier/Notifier.Connections/Notifier.Connections.csproj
+          -c Release -r linux-arm64 --self-contained false
+          -o publish/notifier-connections
+
+      - name: Zip the connections function
+        working-directory: publish/notifier-connections
+        run: zip -r ../notifier-connections.zip .
+
+      - name: Deploy the connections function
+        run: >
+          aws lambda update-function-code
+          --function-name ${{ needs.terraform.outputs.connections_function_name }}
+          --zip-file fileb://publish/notifier-connections.zip
+          --publish
+
 # ---------------------------------------------------------------------------
 # Further deploy jobs are added by the phase that introduces them:
 #
-#   deploy-notifier  (Phase 4)  paths: src/Notifier/**, src/Contracts/**
+#   The Phase 5 consumer joins deploy-notifier - it is the same service.
 #
 # EVERY one of them MUST declare `needs: terraform`.
 # ---------------------------------------------------------------------------
