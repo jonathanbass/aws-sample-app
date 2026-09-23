@@ -292,7 +292,19 @@ Invoke-WebRequest -Method Post -Uri "<api-url>/messages" -ContentType "applicati
 
 ---
 
-## Phase 5: Events push to connected browsers
+## Phase 5: Events push to connected browsers — ✅ VERIFIED IN PRODUCTION 2026-09-21
+
+**Evidence:** `wscat` held an open connection. A `POST /messages` from a second terminal printed the `TextSubmitted` event in `wscat` within about a second. The full chain runs: `TransactWriteItems` → DynamoDB stream → relay → SQS FIFO → consumer → `PostToConnection` → browser.
+
+**The first attempt failed, and the diagnosis is worth keeping.** `wscat` received nothing. The queue was empty and the message sat in the dead-letter queue, which proved the consumer had run and thrown. The log read:
+
+```
+Error: executable assembly /var/task/Notifier.Consumer.dll or binary /var/task/Notifier.Consumer not found.
+```
+
+The consumer held the placeholder zip. `deploy.yml` in the repo had no consumer steps, because the updated workflow was never copied in.
+
+**Check the workflow file BEFORE verifying a deployment.** This same fault cost time in Phases 3, 4 and 5. Terraform creates each Lambda with a placeholder, so a missing deploy job always looks like a code fault rather than a missing file. `grep` the repo's `deploy.yml` for the new function name first.
 
 **Commit scope:** The full backend round trip works.
 **Verification:** `wscat` connected in one terminal, `curl` posting in another → the text arrives in `wscat` within ~1s. **This is the headline acceptance test for the whole POC.**
@@ -348,7 +360,7 @@ Invoke-WebRequest -Method Post -Uri "<api-url>/messages" -ContentType "applicati
 
 ### Tasks
 
-- [ ] **Task 6.1: Scaffold the SPA**
+- [x] **Task 6.1: Scaffold the SPA**
 
   **Files:** Create `web/` — Vite + React + TypeScript, Tailwind, shadcn/ui
   **Acceptance criteria:**
@@ -356,28 +368,28 @@ Invoke-WebRequest -Method Post -Uri "<api-url>/messages" -ContentType "applicati
   - Colors defined as CSS custom properties on `:root`, not hardcoded in components
   - API and WebSocket URLs come from `VITE_`-prefixed env vars, never hardcoded
 
-- [ ] **Task 6.2: Tests for the `useMessageSocket` hook**
+- [x] **Task 6.2: Tests for the `useMessageSocket` hook**
 
   **Files:** Create `web/src/hooks/useMessageSocket.test.ts`
   **Acceptance criteria:** Appends received messages in order; reconnects after an unexpected close; cleans up the socket on unmount (no listener leak)
   **Constraints:** Fake the `WebSocket` global. No network in tests.
 
-- [ ] **Task 6.3: Implement `useMessageSocket` (make tests pass)**
+- [x] **Task 6.3: Implement `useMessageSocket` (make tests pass)**
 
   **Files:** Create `web/src/hooks/useMessageSocket.ts`
 
-- [ ] **Task 6.4: Tests for the submit form**
+- [x] **Task 6.4: Tests for the submit form**
 
   **Files:** Create `web/src/components/SubmitForm.test.tsx`
   **Acceptance criteria:** Posts the typed text; disables submit while in flight and for empty input; surfaces an error state on a failed request
   **Constraints:** Test observable behaviour, never markup or styling (`react-nextjs-testing.md`)
 
-- [ ] **Task 6.5: Implement the form and message list (make tests pass)**
+- [x] **Task 6.5: Implement the form and message list (make tests pass)**
 
   **Files:** Create `web/src/components/SubmitForm.tsx`, `web/src/components/MessageList.tsx`, wire into `App.tsx`
   **Acceptance criteria:** Each list row uses the `messageId` as its React `key`, never the array index (design doc D15). The id must be held in component state, not discarded after render, so a later delete or edit can address one row.
 
-- [ ] **Task 6.6: Amplify monorepo build spec**
+- [x] **Task 6.6: Amplify monorepo build spec**
 
   **Files:** Create `amplify.yml` at the repo root
   **Exact content shape:**
@@ -403,7 +415,7 @@ Invoke-WebRequest -Method Post -Uri "<api-url>/messages" -ContentType "applicati
   ```
   **Constraints:** `appRoot` MUST equal the `AMPLIFY_MONOREPO_APP_ROOT` env var set in Task 6.7.
 
-- [ ] **Task 6.7: Terraform — Amplify app**
+- [x] **Task 6.7: Terraform — Amplify app**
 
   **Files:** Create `infra/main/amplify.tf`
   **Exact values that matter:**
@@ -413,15 +425,15 @@ Invoke-WebRequest -Method Post -Uri "<api-url>/messages" -ContentType "applicati
   - **No `repository`, `oauth_token` or `access_token`**, plus `lifecycle { ignore_changes = [repository, oauth_token, access_token] }` — the provider wires the deprecated OAuth path and rejects modern GitHub tokens (design doc §5)
   - A custom rewrite rule sending `/<*>` to `/index.html` with status `200` — without it, SPA deep links 404
 
-- [ ] **Task 6.8: Connect the repository in the Amplify console — MANUAL, once**
+- [-] **Task 6.8: Connect the repository in the Amplify console — MANUAL, once**
 
   **Acceptance criteria:** Connect via the GitHub App, select `main`, confirm a build triggers and the deployed URL serves the SPA
   **Constraints:** Do this by hand. Do not add a token to Terraform.
 
-- [ ] **Task 6.9: Narrow CORS**
-
-  **Files:** Modify `infra/main/ingest.tf`
-  **Acceptance criteria:** HTTP API CORS `allow_origins` is the Amplify domain rather than `*`
+- [-] **Task 6.9: Narrow CORS** — NOT DONE, deliberately
+  **Reason 1:** It creates a Terraform dependency cycle. The ingest API would depend on the Amplify app, which depends on the ingest stage URL for its `VITE_API_URL` build variable.
+  **Reason 2, and the stronger one:** this endpoint has no authentication (D12). CORS is enforced by the *browser*, not the server, so anyone can call the API with `curl` whatever `allow_origins` says. Narrowing it would look like a control while protecting nothing.
+  **When to revisit:** narrow it at the same time auth is added, not before. The reasoning is recorded in `infra/main/ingest.tf`.
 
 **→ Phase 6 complete. The POC is done.**
 

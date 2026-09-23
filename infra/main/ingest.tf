@@ -155,8 +155,18 @@ resource "aws_apigatewayv2_api" "ingest" {
   name          = "${var.project_name}-ingest"
   protocol_type = "HTTP"
 
-  # Wide open for now. Phase 6 narrows allow_origins to the Amplify domain
-  # once that domain exists.
+  # allow_origins stays "*", deliberately.
+  #
+  # Two reasons. First, narrowing it to the Amplify domain creates a Terraform
+  # dependency cycle: this API would depend on the Amplify app, which depends
+  # on this API's stage URL for its VITE_API_URL build variable.
+  #
+  # Second, and more important: this endpoint has NO authentication (design
+  # D12). CORS is enforced by the browser, not by the server, so anyone can
+  # call this API directly with curl whatever allow_origins says. Narrowing it
+  # would look like a control while protecting nothing.
+  #
+  # If auth is ever added, narrow this at the same time - not before.
   cors_configuration {
     allow_origins = ["*"]
     allow_methods = ["POST", "OPTIONS"]

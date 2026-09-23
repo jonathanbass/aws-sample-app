@@ -446,3 +446,6 @@ override.tf.json
 
 # Terraform build artifacts
 infra/main/.build/
+
+# Local environment overrides
+.env.local

@@ -1,0 +1,30 @@
+# Amplify monorepo build specification.
+#
+# The `applications` list form is REQUIRED for a monorepo. A single-app build
+# spec would build from the repository root, where there is no package.json.
+#
+# `appRoot` MUST equal the AMPLIFY_MONOREPO_APP_ROOT environment variable set
+# on the Amplify app in infra/main/amplify.tf. AWS does not infer that variable
+# for an app created by CloudFormation or Terraform, so both must be set and
+# must agree.
+version: 1
+applications:
+  - appRoot: web
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            # `npm ci`, not `npm install`. It installs exactly what the lock
+            # file pins, so a build cannot silently pick up a newer package.
+            - npm ci
+        build:
+          commands:
+            - npm run build
+      artifacts:
+        # Vite writes to dist. This path is relative to appRoot.
+        baseDirectory: dist
+        files:
+          - "**/*"
+      cache:
+        paths:
+          - node_modules/**/*
