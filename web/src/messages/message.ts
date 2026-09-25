@@ -5,7 +5,7 @@ import { z } from "zod"
   with `as Message` would let a malformed frame through and fail later, in a
   render, where the cause is much harder to see.
 */
-const messageSchema = z.object({
+export const messageSchema = z.object({
   messageId: z.string(),
   text: z.string(),
   submittedAt: z.string(),

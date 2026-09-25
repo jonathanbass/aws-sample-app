@@ -3,10 +3,10 @@ import { config } from "@/config"
 import { MessageList } from "@/messages/message-list"
 import { SubmitForm } from "@/messages/submit-form"
 import { submitMessage } from "@/messages/submit-message"
-import { useMessageSocket } from "@/messages/use-message-socket"
+import { useMessages } from "@/messages/use-messages"
 
 export function App() {
-  const messages = useMessageSocket(config.webSocketUrl)
+  const { messages, historyFailed } = useMessages(config.apiUrl, config.webSocketUrl)
   const [error, setError] = useState<string | null>(null)
 
   const handleSubmit = async (text: string) => {
@@ -35,6 +35,12 @@ export function App() {
       {error !== null && (
         <p role="alert" className="text-destructive text-sm">
           {error}
+        </p>
+      )}
+
+      {historyFailed && (
+        <p role="status" className="text-muted-foreground text-sm">
+          Earlier messages could not be loaded. New messages will still appear.
         </p>
       )}
 
