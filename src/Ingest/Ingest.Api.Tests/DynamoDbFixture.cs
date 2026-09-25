@@ -44,6 +44,28 @@ public sealed class DynamoDbFixture : IAsyncLifetime
         await CreateMessagesTableAsync();
     }
 
+    /// <summary>
+    /// Removes every row. Call this at the start of each test that counts rows.
+    /// </summary>
+    /// <remarks>
+    /// The fixture is shared by every test in a class, so rows written by one
+    /// test are visible to the next. A scan then returns the earlier test's
+    /// data and the counts are wrong, in a way that depends on test order.
+    /// </remarks>
+    public async Task ClearAsync()
+    {
+        ScanResponse rows = await Client.ScanAsync(new ScanRequest
+        {
+            TableName = TableName,
+            ProjectionExpression = $"{MessageItems.PartitionKey}, {MessageItems.SortKey}",
+        });
+
+        foreach (Dictionary<string, AttributeValue> row in rows.Items)
+        {
+            await Client.DeleteItemAsync(TableName, row);
+        }
+    }
+
     public async Task DisposeAsync()
     {
         Client?.Dispose();

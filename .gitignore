@@ -449,3 +449,6 @@ infra/main/.build/
 
 # Local environment overrides
 .env.local
+
+# Shell crash dumps
+*.stackdump

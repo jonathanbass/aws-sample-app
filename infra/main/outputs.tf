@@ -60,13 +60,3 @@ output "notifier_consumer_function_name" {
   description = "Lambda the deploy-notifier workflow job pushes consumer code to."
   value       = aws_lambda_function.notifier_consumer.function_name
 }
-
-output "amplify_app_id" {
-  description = "Amplify app id. Connect the repository to this app once, by hand, in the console."
-  value       = aws_amplify_app.web.id
-}
-
-output "amplify_default_domain" {
-  description = "The SPA URL once the repository is connected and a build has run."
-  value       = "https://main.${aws_amplify_app.web.default_domain}"
-}

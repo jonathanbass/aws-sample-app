@@ -58,3 +58,24 @@ data "archive_file" "placeholder" {
     filename = "placeholder.txt"
   }
 }
+
+# ---------------------------------------------------------------------------
+# Amplify is deliberately NOT managed here.
+#
+# The AWS provider cannot connect an Amplify app to GitHub. `oauth_token`
+# wires the deprecated OAuth path, and `access_token` accepts only classic
+# ghp_ tokens, not the fine-grained ones GitHub now issues. CodeConnections
+# support is still an open enhancement request on the provider
+# (hashicorp/terraform-provider-aws#32610).
+#
+# The console only offers repository connection when an app is CREATED, not
+# for an existing one. So an app created by Terraform can never be connected
+# by either route.
+#
+# The app was therefore created in the Amplify console from GitHub, and it
+# builds on push. Its settings live in the console and in amplify.yml at the
+# repository root. Do not add aws_amplify_app back: it would create a second,
+# empty app beside the working one.
+#
+# See the design document, decision D9.
+# ---------------------------------------------------------------------------

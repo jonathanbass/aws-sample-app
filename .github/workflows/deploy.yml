@@ -63,7 +63,6 @@ jobs:
       consumer_function_name: ${{ steps.outputs.outputs.consumer_function_name }}
       http_api_url: ${{ steps.outputs.outputs.http_api_url }}
       websocket_url: ${{ steps.outputs.outputs.websocket_url }}
-      amplify_url: ${{ steps.outputs.outputs.amplify_url }}
     steps:
       - uses: actions/checkout@v5
 
@@ -109,13 +108,11 @@ jobs:
           echo "consumer_function_name=$(terraform output -raw notifier_consumer_function_name)" >> "$GITHUB_OUTPUT"
           echo "http_api_url=$(terraform output -raw http_api_url)" >> "$GITHUB_OUTPUT"
           echo "websocket_url=$(terraform output -raw websocket_url)" >> "$GITHUB_OUTPUT"
-          echo "amplify_url=$(terraform output -raw amplify_default_domain)" >> "$GITHUB_OUTPUT"
 
       - name: Summary
         run: |
           echo "HTTP API: ${{ steps.outputs.outputs.http_api_url }}" >> "$GITHUB_STEP_SUMMARY"
           echo "WebSocket: ${{ steps.outputs.outputs.websocket_url }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "SPA: ${{ steps.outputs.outputs.amplify_url }}" >> "$GITHUB_STEP_SUMMARY"
 
   deploy-ingest:
     name: deploy ingest

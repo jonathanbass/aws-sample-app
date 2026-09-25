@@ -6,6 +6,9 @@ public sealed record MessageItems(
     Dictionary<string, AttributeValue> DomainItem,
     Dictionary<string, AttributeValue> OutboxItem)
 {
+    /// <summary>Both items, in the order they are written.</summary>
+    public IReadOnlyList<Dictionary<string, AttributeValue>> Both => [DomainItem, OutboxItem];
+
     public const string PartitionKey = "pk";
     public const string SortKey = "sk";
 

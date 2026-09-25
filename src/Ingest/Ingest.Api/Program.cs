@@ -12,14 +12,17 @@ string tableName =
     ?? throw new InvalidOperationException(
         $"{EnvironmentVariables.MessagesTableName} is not configured.");
 
-SubmitMessageFunction function = new(
-    new AmazonDynamoDBClient(),
-    tableName,
-    TimeProvider.System);
+AmazonDynamoDBClient dynamoDb = new();
+
+// One Lambda serves every route on /messages. The router dispatches on the
+// method API Gateway puts on the request context.
+MessagesRouter router = new(
+    new SubmitMessageFunction(dynamoDb, tableName, TimeProvider.System),
+    new ListMessagesService(dynamoDb, tableName));
 
 await LambdaBootstrapBuilder
     .Create<APIGatewayHttpApiV2ProxyRequest, APIGatewayHttpApiV2ProxyResponse>(
-        function.HandleAsync,
+        router.HandleAsync,
         new DefaultLambdaJsonSerializer())
     .Build()
     .RunAsync();

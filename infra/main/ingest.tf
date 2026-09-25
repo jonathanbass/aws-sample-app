@@ -77,6 +77,10 @@ data "aws_iam_policy_document" "ingest_submit" {
     actions = [
       "dynamodb:PutItem",
       "dynamodb:TransactWriteItems",
+
+      # GET /messages reads the history. A scan, because the table is keyed by
+      # message id with no index that groups every message together.
+      "dynamodb:Scan",
     ]
 
     resources = [aws_dynamodb_table.messages.arn]
@@ -184,6 +188,15 @@ resource "aws_apigatewayv2_integration" "ingest_submit" {
 resource "aws_apigatewayv2_route" "submit_message" {
   api_id    = aws_apigatewayv2_api.ingest.id
   route_key = "POST /messages"
+  target    = "integrations/${aws_apigatewayv2_integration.ingest_submit.id}"
+}
+
+# Both routes reach the SAME Lambda. MessagesRouter dispatches on the method
+# that API Gateway puts on the request context. One function keeps the cold
+# starts and the Terraform smaller than a function per route.
+resource "aws_apigatewayv2_route" "list_messages" {
+  api_id    = aws_apigatewayv2_api.ingest.id
+  route_key = "GET /messages"
   target    = "integrations/${aws_apigatewayv2_integration.ingest_submit.id}"
 }
 
